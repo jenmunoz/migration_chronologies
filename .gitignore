@@ -36,3 +36,5 @@ po/*~
 rsconnect/
 Obtaining_ebird_data_chronologies.R
 /data
+0_downloading_ebird_for_chronologies.R
+/outputs/plots
