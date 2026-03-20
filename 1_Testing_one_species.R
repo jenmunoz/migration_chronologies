@@ -92,7 +92,7 @@ ebirdst::ebirdst_data_dir()
 # 1) DOWNLOADING DATA FOR THE SPECIES OF INTEREST 
 # ================================
 
-
+species_list<-read.csv("data/list/request_species_list.csv")
 
 
 
@@ -208,26 +208,10 @@ plot(hunting_district_van_island)
 
 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
-#
+# For one species at the time using per
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
-
-
-unique(hunting_districts$REG_R_NAME)
-
-
-
-# transform to the projection of interest in this case WGC 84, because ebird is at that projection too 
-
-polygon_proj <- knc_boundary %>%
-  st_transform(8857) %>%  # Equal Earth projection (projected CRS, meters)
-  vect()
-
-
-
-
-
-
-
+#Please note that although we are running afunction to calcultae chronologies for all species
+# Values are not comparable between them as tehy are relative abundances
 
 
 
@@ -237,43 +221,177 @@ polygon_proj <- knc_boundary %>%
 
 # ================================
 # 0) SETUP
-region_boundary <-st_read("data/conservation_polygon/BC/BC_boundary_layer.shp")
-region_boundary<-hunting_district_okanagan
+#region_boundary <-st_read("data/conservation_polygon/BC/BC_boundary_layer.shp")
+
+harvest_zone1<- sf::st_read("data/conservation_polygon/Harvest_Survey_Zones/Harvest_Survey_Zones_2017.shp") %>%
+  st_transform(8857) %>% 
+  filter(Zonename=="British Columbia - Zone 1") %>% 
+  st_make_valid() # Fixes invalid geometries for example when islands are disconected they facilitate operations later on 
 
 
-# download data if they haven't already been downloaded
-# only weekly 3km relative abundance, median and confidence limits
+#ebirdst_download_status( "American Wigeon",pattern = "abundance_(median|lower|upper)_3km", download_occurrence = TRUE,dry_run = FALSE,force = TRUE)
 
+chronologies_abundance <- NULL
 
-ebirdst_download_status( "American Wigeon",pattern = "abundance_(median|lower|upper)_3km", download_occurrence = TRUE,dry_run = FALSE,force = TRUE)
-
+for (species in species_list) {
 
 # load the median weekly relative abundance and lower/upper confidence limits
-abd_median <- load_raster("amewig", product = "abundance", metric = "median")
-abd_lower <- load_raster("amewig", product = "abundance", metric = "lower")
-abd_upper <- load_raster("amewig", product = "abundance", metric = "upper")
+abd_median <- load_raster(species, product = "abundance", metric = "median")
+abd_lower <- load_raster(species, product = "abundance", metric = "lower")
+abd_upper <- load_raster(species, product = "abundance", metric = "upper")
 
 # project region boundary to match raster data
-region_boundary_proj <- st_transform(region_boundary, st_crs(abd_median))
+#region_boundary_proj <- st_transform(region_boundary, st_crs(abd_median))
 
 # extract values within region and calculate the mean
-abd_median_region <- extract(abd_median, region_boundary_proj,
+abd_median_region <- extract(abd_median, harvest_zone1,
                              fun = "mean", na.rm = TRUE, ID = FALSE)
-abd_lower_region <- extract(abd_lower, region_boundary_proj,
+abd_lower_region <- extract(abd_lower, harvest_zone1,
                             fun = "mean", na.rm = TRUE, ID = FALSE)
-abd_upper_region <- extract(abd_upper, region_boundary_proj,
+abd_upper_region <- extract(abd_upper, harvest_zone1,
                             fun = "mean", na.rm = TRUE, ID = FALSE)
 
 # transform to data frame format with rows corresponding to weeks
-chronology <- data.frame(week = as.Date(names(abd_median)),
+chronology <- data.frame(species=species, 
+                         week = as.Date(names(abd_median)),
                          median = as.numeric(abd_median_region),
                          lower = as.numeric(abd_lower_region),
                          upper = as.numeric(abd_upper_region))
-ggplot(chronology) +
-  aes(x = week, y = median) +
-  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) +
-  geom_line() +
+
+# combine with other species
+
+chronologies_abundance <- bind_rows(chronologies_abundance, chronology)
+
+}
+
+# Plot but want to do one for esach specie separately 
+
+# ggplot(chronology) +
+#   aes(x = week, y = median) +
+#   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) +
+#   geom_line() +
+#   scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+#   labs(x = "Week", 
+#        y = "Mean relative abundance in Bc",
+#        title = "Migration chronology for American Wigeon in Bc")
+
+
+species_list_plot <- unique(chronologies_abundance$species)
+
+for (sp in species_list_plot) {
+  
+  p <- ggplot(chronologies %>% filter(species == sp)) +
+    aes(x = week, y = median, color = species, fill = species) +
+    geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = 0.2) +
+    geom_line(linewidth = 1) +
+    scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+    labs(
+      x = NULL, 
+      y = "Mean relative abundance ",
+      title = paste("Migration chronology Harvest Zone1-", sp),
+      color = NULL, fill = NULL
+    ) +
+    theme(legend.position = "none")
+  
+  ggsave(
+    filename = paste0("chronologyAbundance_HarvestZone1_2023", gsub(" ", "_", sp), ".png"),
+    plot = p,
+    width = 8,
+    height = 5
+  )
+  
+}
+# Save each plot automatically
+# 
+# Add this inside the loop:
+  
+  ggsave(
+    filename = paste0("chronology_", gsub(" ", "_", sp), ".png"),
+    plot = p,
+    width = 8,
+    height = 5
+  )
+
+
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+# For multiple species using proportionof population
+# Corrects for detectability differences between species 
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+
+# directory for ebird 
+
+Sys.setenv(EBIRDST_DATA_DIR ="C:/Users/jmunoz/Documents/BirdsCanada/1_jv_science_coordinator_role/1_projects/10_migration_chronologies/data/migration_chronologies/data/species_rasters")
+ebirdst::ebirdst_data_dir()
+
+# data 
+species_list_requested<- read.csv("data/list/requested_species_list.csv")
+
+# Vector of species names we’ll potentially loop over later
+species_list <- unique(species_list_requested$common_name)
+
+species_list <- c("American Coot","American Wigeon","Barrow's Goldeneye")
+
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+# Harvest zone 1
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+
+harvest_zone1<- sf::st_read("data/conservation_polygon/Harvest_Survey_Zones/Harvest_Survey_Zones_2017.shp") %>%
+  st_transform(8857) %>% 
+  filter(Zonename=="British Columbia - Zone 1") %>% 
+  st_make_valid() # Fixes invalid geometries for example when islands are disconected they facilitate operations later on 
+
+
+chronologies <- NULL
+for (species in species_list) {
+  # download weekly 27km relative abundance, median and confidence limits
+  # ebirdst_download_status(species,
+  #                         pattern = "abundance_(median|upper|lower)_3km")
+  
+  # load the median weekly relative abundance and lower/upper confidence limits
+  abd_median <- load_raster(species)
+  abd_lower <- load_raster(species, metric = "lower")
+  abd_upper <- load_raster(species, metric = "upper")
+  
+  # total relative abundance across the entire modeled range of the species
+  abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
+  
+  # total abundance within the region of interest
+  abd_median_region <- extract(abd_median, harvest_zone1,
+                               fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_lower_region <- extract(abd_lower, harvest_zone1,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_upper_region <- extract(abd_upper, harvest_zone1,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+  
+  # proportion of population within the region of interest
+  prop_pop_median <- as.numeric(abd_median_region) / abd_total
+  prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
+  prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
+  
+  # transform to data frame format with rows corresponding to weeks
+  chronology <- data.frame(species = species,
+                           week = as.Date(names(abd_median)),
+                           median = prop_pop_median,
+                           lower = prop_pop_lower,
+                           upper = pmin(prop_pop_upper, 1))
+  
+  # combine with other species
+  chronologies <- bind_rows(chronologies, chronology)
+}
+
+#Finally, we can use this data frame to generate migration chronologies for these species.
+
+ggplot(chronologies) +
+  aes(x = week, y = median, color = species, fill = species) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), color = NA, alpha = 0.2) +
+  geom_line(linewidth = 1) +
   scale_x_date(date_labels = "%b", date_breaks = "1 month") +
-  labs(x = "Week", 
-       y = "Mean relative abundance in Bc",
-       title = "Migration chronology for American Wigeon in Bc")
+  scale_y_continuous(labels = scales::label_percent()) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1") +
+  labs(x = NULL,
+       y = "Percent of population in Harvest zone 1",
+       title = "Migration chronologies for Game bird species of interest in BC-Harvest zone 1",
+       color = NULL, fill = NULL) +
+  theme(legend.position = "bottom")
+
