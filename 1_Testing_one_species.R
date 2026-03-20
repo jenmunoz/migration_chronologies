@@ -74,7 +74,7 @@ getwd()
 ebirdst_version()
 
 # ================================
-# 1) CHOOSING THE DATA DIRECTORY
+# 1) CHOOSING THE DATA DIRECTORY FOR EBIRD DATA 
 # ================================
 # ebirdst_data_dir() resolves the download directory using:
 # 1) EBIRDST_DATA_DIR env var if set, otherwise
@@ -91,10 +91,154 @@ ebirdst::ebirdst_data_dir()
 # ================================
 # 1) DOWNLOADING DATA FOR THE SPECIES OF INTEREST 
 # ================================
+
+
+
+
+
+
+
+# ================================
+# 1) READING TEH POLYGONS ADN FILTERING THEM
+# ================================
+# check the class to decide how to work with them 
+ class( fraser_river<- sf::st_read("data/conservation_polygon/Fraser_Skagit_Valley/SnowGooseSurveyArea.shp"))
+# tehre are sf and datframes so sf package is fine probably even dplyr 
+
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+# River Deltas ( 2 River deltas)
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+# for the river deltas I needed to filter by lenght because the otehr attributes were not different between the two 
+
+fraser_river<- sf::st_read("data/conservation_polygon/Fraser_Skagit_Valley/SnowGooseSurveyArea.shp")  %>%
+  st_transform(8857) %>% 
+  filter(Shape_Leng<"300000")
+
+skagit_river<- sf::st_read("data/conservation_polygon/Fraser_Skagit_Valley/SnowGooseSurveyArea.shp")  %>%
+  st_transform(8857) %>% 
+  filter(Shape_Leng>"400000")
+
+print(names(fraser_river))
+
+# Rain check for a couple of them 
+# st_geometry_type(skagit_river) # should be a polygoon no multipolygon
+# nrow(skagit_river)# should have one layer
+# plot(skagit_river)
+
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+# BC Harvest zones (2 zones) 
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+
+harvest_zone1<- sf::st_read("data/conservation_polygon/Harvest_Survey_Zones/Harvest_Survey_Zones_2017.shp") %>%
+  st_transform(8857) %>% 
+  filter(Zonename=="British Columbia - Zone 1") %>% 
+  st_make_valid() # Fixes invalid geometries for example when islands are disconected they facilitate operations later on 
+
+harvest_zone2<- sf::st_read("data/conservation_polygon/Harvest_Survey_Zones/Harvest_Survey_Zones_2017.shp") %>%
+  st_transform(8857) %>% 
+  filter(Zonename=="British Columbia - Zone 2")%>%
+  st_make_valid()
+
+# Rain check for a couple of them 
+st_geometry_type(harvest_zone1) # should be a polygoon no multipolygon
+# nrow(skagit_river)# should have one layer
+ plot(harvest_zone1)
+
+
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+# BC Harvest districts ( 8 districts)
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+
+hunting_district_van_island<- sf::st_read("data/conservation_polygon/WAA_wildlifeMGMT_units/WAAWMU_SVW_polygon.shp") %>%
+  sf::st_transform(8857) %>% # transforms to WGS84
+  filter(REG_R_NAME =="Vancouver Island") %>% 
+  st_union() %>% #dissolves the polygons into one 
+  st_as_sf # make sure the object is a dataframe with spatial geometry
+
+print(names(hunting_districts))
+
+hunting_district_lower_mainland<- sf::st_read("data/conservation_polygon/WAA_wildlifeMGMT_units/WAAWMU_SVW_polygon.shp") %>%
+  sf::st_transform(8857) %>%  # transforms to WGS84
+  filter(REG_R_NAME =="Lower Mainland") %>% 
+  st_union() %>% # dissolves the polygons into one 
+  st_as_sf # make sure the object is a dataframe with spatial geometry
+plot(hunting_district_lower_mainland)
+
+hunting_district_thompson<- sf::st_read("data/conservation_polygon/WAA_wildlifeMGMT_units/WAAWMU_SVW_polygon.shp") %>%
+  sf::st_transform(8857) %>% 
+  filter(REG_R_NAME =="Thompson")%>% 
+  st_union() %>% 
+  st_as_sf
+
+hunting_district_kootenay<- sf::st_read("data/conservation_polygon/WAA_wildlifeMGMT_units/WAAWMU_SVW_polygon.shp") %>%
+  sf::st_transform(8857) %>% 
+  filter(REG_R_NAME =="Kootenay")%>% 
+  st_union() %>% 
+  st_as_sf
+
+hunting_district_cariboo<- sf::st_read("data/conservation_polygon/WAA_wildlifeMGMT_units/WAAWMU_SVW_polygon.shp") %>%
+  sf::st_transform(8857) %>% 
+  filter(REG_R_NAME =="Cariboo")%>% 
+  st_union() %>% 
+  st_as_sf
+
+hunting_district_skeena<- sf::st_read("data/conservation_polygon/WAA_wildlifeMGMT_units/WAAWMU_SVW_polygon.shp") %>%
+  sf::st_transform(8857) %>% 
+  filter(REG_R_NAME =="Skeena")%>% 
+  st_union() %>% 
+  st_as_sf
+
+hunting_district_omineca<- sf::st_read("data/conservation_polygon/WAA_wildlifeMGMT_units/WAAWMU_SVW_polygon.shp") %>%
+  sf::st_transform(8857) %>% 
+  filter(REG_R_NAME =="Omineca")%>% 
+  st_union() %>% 
+  st_as_sf
+
+hunting_district_okanagan<- sf::st_read("data/conservation_polygon/WAA_wildlifeMGMT_units/WAAWMU_SVW_polygon.shp") %>%
+  sf::st_transform(8857) %>% 
+  filter(REG_R_NAME =="Okanagan")%>% 
+  st_union() %>% 
+  st_as_sf
+
+
+# Rain check for a couple of them 
+st_geometry_type(hunting_district_van_island) # should be a polygoon no multipolygon
+nrow(hunting_district_van_island)# should have one layer
+plot(hunting_district_van_island)
+
+
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+#
+#_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+
+
+unique(hunting_districts$REG_R_NAME)
+
+
+
+# transform to the projection of interest in this case WGC 84, because ebird is at that projection too 
+
+polygon_proj <- knc_boundary %>%
+  st_transform(8857) %>%  # Equal Earth projection (projected CRS, meters)
+  vect()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ================================
 # 0) SETUP
 region_boundary <-st_read("data/conservation_polygon/BC/BC_boundary_layer.shp")
-
+region_boundary<-hunting_district_okanagan
 
 
 # download data if they haven't already been downloaded
