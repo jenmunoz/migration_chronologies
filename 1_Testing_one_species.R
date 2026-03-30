@@ -105,7 +105,7 @@ species_list<-read.csv("data/list/request_species_list.csv")
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 # River Deltas ( 2 River deltas)
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
-# for the river deltas I needed to filter by lenght because the otehr attributes were not different between the two 
+# for the river deltas I needed to filter by length because the other attributes were not different between the two 
 
 fraser_river<- sf::st_read("data/conservation_polygon/Fraser_Skagit_Valley/SnowGooseSurveyArea.shp")  %>%
   st_transform(8857) %>% 
@@ -208,7 +208,7 @@ plot(hunting_district_van_island)
 # For each zone 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 #Please note that although we are running afunction to calcultae chronologies for all species
-# Values are not comparable between them as they are relative abundances
+# Values are not comparable between them as they are relative abundances, to compare tehm use the percentage of population 
 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 # Harvest Zone 1 
@@ -253,8 +253,8 @@ species_list <- unique(species_list_requested$common_name)
 
 # WARNING The chronologies dont do well for rare species
 # WARNING As we increase scale we get more acceptable level of accuracy in the chronology 
-
-#---- Function to generate the chronology dataset -------------
+#-------------Harvest zone 1
+#----z1  Function to generate the chronology dataset -------------
 chronologies_abundance <- NULL
 
 for (species in species_list) {
@@ -388,7 +388,7 @@ harvest_zone1<- sf::st_read("data/conservation_polygon/Harvest_Survey_Zones/Harv
   filter(Zonename=="British Columbia - Zone 1") %>% 
   st_make_valid() # Fixes invalid geometries for example when islands are disconected they facilitate operations later on 
 
-#----------Function to generate the chronology for percentage of pop dataset-----------
+#----z1  Function to generate the chronology for percentage of pop dataset-----------
 
 chronologies <- NULL
 for (species in species_list) {
@@ -646,6 +646,7 @@ for (sp in species_list_plot) {
 
 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+
 # ---------hunting_district_van_island----------
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 
@@ -816,6 +817,7 @@ for (sp in species_list_plot) {
   )
   
 }
+
 
 
 
@@ -1088,84 +1090,85 @@ for (sp in species_list_plot) {
 # For multiple species using proportion of population
 # Corrects for detectability differences between species 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
-# 
-# # Vector of species names we’ll potentially loop over later
-# species_list <- unique(species_list_requested$common_name)
-# 
-# #species_list <- c("American Coot","American Wigeon","Barrow's Goldeneye")
-# 
-# chronologies_h3<- NULL
-# 
+
+# Vector of species names we’ll potentially loop over later
+species_list <- unique(species_list_requested$common_name)
+
 #---hd3 Function to generate the chronology for percentage of pop dataset -----
-# 
-# for (species in species_list) {
-#   # download weekly 27km relative abundance, median and confidence limits
-#   # ebirdst_download_status(species,
-#   #                         pattern = "abundance_(median|upper|lower)_3km")
-#   
-#   # load the median weekly relative abundance and lower/upper confidence limits
-#   abd_median <- load_raster(species, metric="median")
-#   abd_lower <- load_raster(species, metric = "lower")
-#   abd_upper <- load_raster(species, metric = "upper")
-#   
-#   # total relative abundance across the entire modeled range of the species, extract as a vector
-#   abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
-#   
-#   # total abundance within the region of interest # extract= extract values for a given loiocation 
-#   # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too 
-#   abd_median_region <- extract(abd_median, hunt_district_thompson,
-#                                fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_lower_region <- extract(abd_lower,  hunt_district_thompson,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_upper_region <- extract(abd_upper,  hunt_district_thompson,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   
-#   # proportion of global population within the region of interest
-#   prop_pop_median <- as.numeric(abd_median_region) / abd_total
-#   prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
-#   prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
-#   
-#   # transform to data frame format with rows corresponding to weeks
-#   # median give as teh median proportion of poplaton within teh area of interest 
-#   chronology <- data.frame(species = species,
-#                            week = as.Date(names(abd_median)),
-#                            median = prop_pop_median,
-#                            lower = prop_pop_lower,
-#                            upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions 
-#   
-#   # combine with other species
-#   chronologies_h3 <- bind_rows(chronologies_h3, chronology)
-# }
-# 
-# #Finally, we can use this data frame to generate migration chronologies for these species.
-# 
-# graphics.off()
-# 
-# out_dir <- "outputs/plots/hunt_district_thompson/perc_pop_hd_t"
-# 
-# 
-# for (sp in species_list_plot) {
-#   p <- ggplot(chronologies_h3%>% filter(species == sp)) +
-#     aes(x = week, y = median) +
-#     geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
-#     geom_line(linewidth = 1, color="yellow4") +
-#     scale_x_date(date_labels = "%b", date_breaks = "1 month") +
-#     scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
-#     labs(x = NULL,
-#          y = "Percent of population Hunting district Thompson",
-#          title =paste( "Migration chronologies BC-Hunting district Thompson-", sp),
-#          color = NULL, fill = NULL) +
-#     theme_classic()+
-#     theme(legend.position = "bottom")
-#   # Save each plot automatically 
-#   ggsave(
-#     filename = file.path(out_dir, paste0("crono_Percpop-hd_t_23_", gsub(" ", "_", sp), ".png")),
-#     plot = p,
-#     width = 8,
-#     height = 5
-#   )
-#   
-# }
+
+chronologies_h3<- NULL
+
+for (species in species_list) {
+  # download weekly 27km relative abundance, median and confidence limits
+  # ebirdst_download_status(species,
+  #                         pattern = "abundance_(median|upper|lower)_3km")
+
+  # load the median weekly relative abundance and lower/upper confidence limits
+  abd_median <- load_raster(species, metric="median")
+  abd_lower <- load_raster(species, metric = "lower")
+  abd_upper <- load_raster(species, metric = "upper")
+
+  # total relative abundance across the entire modeled range of the species, extract as a vector
+  abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
+
+  # total abundance within the region of interest # extract= extract values for a given loiocation
+  # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too
+  abd_median_region <- extract(abd_median, hunt_district_thompson,
+                               fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_lower_region <- extract(abd_lower,  hunt_district_thompson,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_upper_region <- extract(abd_upper,  hunt_district_thompson,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+
+  # proportion of global population within the region of interest
+  prop_pop_median <- as.numeric(abd_median_region) / abd_total
+  prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
+  prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
+
+  # transform to data frame format with rows corresponding to weeks
+  # median give as teh median proportion of poplaton within teh area of interest
+  chronology <- data.frame(species = species,
+                           week = as.Date(names(abd_median)),
+                           median = prop_pop_median,
+                           lower = prop_pop_lower,
+                           upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions
+
+  # combine with other species
+  chronologies_h3 <- bind_rows(chronologies_h3, chronology)
+}
+
+#Finally, we can use this data frame to generate migration chronologies for these species.
+
+species_list_plot <- unique(chronologies_h3$species)
+
+#graphics.off()
+
+out_dir <- "outputs/plots/hunt_district_thompson/perc_pop_hd_t"
+
+
+for (sp in species_list_plot) {
+  p <- ggplot(chronologies_h3%>% filter(species == sp)) +
+    aes(x = week, y = median) +
+    geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
+    geom_line(linewidth = 1, color="yellow4") +
+    scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+    scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
+    labs(x = NULL,
+         y = "Percent of population Hunting district Thompson",
+         title =paste( "Migration chronologies BC-Hunting district Thompson-", sp),
+         color = NULL, fill = NULL) +
+    theme_classic()+
+    theme(legend.position = "bottom")
+  # Save each plot automatically
+  ggsave(
+    filename = file.path(out_dir, paste0("crono_Percpop-hd_t_23_", gsub(" ", "_", sp), ".png")),
+    plot = p,
+    width = 8,
+    height = 5
+  )
+
+}
+
 
 # ---------hunting_district_kootenay---------
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
@@ -1261,85 +1264,83 @@ for (sp in species_list_plot) {
 # Corrects for detectability differences between species 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 # 
-# # Vector of species names we’ll potentially loop over later
-# species_list <- unique(species_list_requested$common_name)
-# 
-# #species_list <- c("American Coot","American Wigeon","Barrow's Goldeneye")
-# 
-# chronologies_h4<- NULL
-# 
+# Vector of species names we’ll potentially loop over later
+species_list <- unique(species_list_requested$common_name)
+
+
+chronologies_h4<- NULL
+
 #---hd4 Function to generate the chronology for percentage of pop dataset -----
-# 
-# for (species in species_list) {
-#   # download weekly 27km relative abundance, median and confidence limits
-#   # ebirdst_download_status(species,
-#   #                         pattern = "abundance_(median|upper|lower)_3km")
-#   
-#   # load the median weekly relative abundance and lower/upper confidence limits
-#   abd_median <- load_raster(species, metric="median")
-#   abd_lower <- load_raster(species, metric = "lower")
-#   abd_upper <- load_raster(species, metric = "upper")
-#   
-#   # total relative abundance across the entire modeled range of the species, extract as a vector
-#   abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
-#   
-#   # total abundance within the region of interest # extract= extract values for a given loiocation 
-#   # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too 
-#   abd_median_region <- extract(abd_median, hunt_district_kootenay,
-#                                fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_lower_region <- extract(abd_lower,  hunt_district_kootenay,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_upper_region <- extract(abd_upper,  hunt_district_kootenay,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   
-#   # proportion of global population within the region of interest
-#   prop_pop_median <- as.numeric(abd_median_region) / abd_total
-#   prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
-#   prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
-#   
-#   # transform to data frame format with rows corresponding to weeks
-#   # median give as teh median proportion of poplaton within teh area of interest 
-#   chronology <- data.frame(species = species,
-#                            week = as.Date(names(abd_median)),
-#                            median = prop_pop_median,
-#                            lower = prop_pop_lower,
-#                            upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions 
-#   
-#   # combine with other species
-#   chronologies_h4 <- bind_rows(chronologies_h4, chronology)
-# }
-# 
-# #Finally, we can use this data frame to generate migration chronologies for these species.
-# 
-# graphics.off()
-# 
-# out_dir <- "outputs/plots/hunt_district_kootenay/perc_pop_hd_t"
-# 
-# 
-# for (sp in species_list_plot) {
-#   p <- ggplot(chronologies_h4%>% filter(species == sp)) +
-#     aes(x = week, y = median) +
-#     geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
-#     geom_line(linewidth = 1, color="yellow4") +
-#     scale_x_date(date_labels = "%b", date_breaks = "1 month") +
-#     scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
-#     labs(x = NULL,
-#          y = "Percent of population Hunting district Kootenay",
-#          title =paste( "Migration chronologies BC-Hunting district Kootenay-", sp),
-#          color = NULL, fill = NULL) +
-#     theme_classic()+
-#     theme(legend.position = "bottom")
-#   # Save each plot automatically 
-#   ggsave(
-#     filename = file.path(out_dir, paste0("crono_Percpop-hd_k_23_", gsub(" ", "_", sp), ".png")),
-#     plot = p,
-#     width = 8,
-#     height = 5
-#   )
-#   
-# }
+
+for (species in species_list) {
+  # download weekly 27km relative abundance, median and confidence limits
+  # ebirdst_download_status(species,
+  #                         pattern = "abundance_(median|upper|lower)_3km")
+
+  # load the median weekly relative abundance and lower/upper confidence limits
+  abd_median <- load_raster(species, metric="median")
+  abd_lower <- load_raster(species, metric = "lower")
+  abd_upper <- load_raster(species, metric = "upper")
+
+  # total relative abundance across the entire modeled range of the species, extract as a vector
+  abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
+
+  # total abundance within the region of interest # extract= extract values for a given loiocation
+  # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too
+  abd_median_region <- extract(abd_median, hunt_district_kootenay,
+                               fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_lower_region <- extract(abd_lower,  hunt_district_kootenay,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_upper_region <- extract(abd_upper,  hunt_district_kootenay,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+
+  # proportion of global population within the region of interest
+  prop_pop_median <- as.numeric(abd_median_region) / abd_total
+  prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
+  prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
+
+  # transform to data frame format with rows corresponding to weeks
+  # median give as teh median proportion of poplaton within teh area of interest
+  chronology <- data.frame(species = species,
+                           week = as.Date(names(abd_median)),
+                           median = prop_pop_median,
+                           lower = prop_pop_lower,
+                           upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions
+
+  # combine with other species
+  chronologies_h4 <- bind_rows(chronologies_h4, chronology)
+}
+
+#Finally, we can use this data frame to generate migration chronologies for these species.
+
+graphics.off()
+species_list_plot <- unique(chronologies_h4$species)
+
+out_dir <- "outputs/plots/hunt_district_kootenay/perc_pop_hd_k"
 
 
+for (sp in species_list_plot) {
+  p <- ggplot(chronologies_h4%>% filter(species == sp)) +
+    aes(x = week, y = median) +
+    geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
+    geom_line(linewidth = 1, color="yellow4") +
+    scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+    scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
+    labs(x = NULL,
+         y = "Percent of population Hunting district Kootenay",
+         title =paste( "Migration chronologies BC-Hunting district Kootenay-", sp),
+         color = NULL, fill = NULL) +
+    theme_classic()+
+    theme(legend.position = "bottom")
+  # Save each plot automatically
+  ggsave(
+    filename = file.path(out_dir, paste0("crono_Percpop-hd_k_23_", gsub(" ", "_", sp), ".png")),
+    plot = p,
+    width = 8,
+    height = 5
+  )
+
+}
 
 
 # ---------hunting_district_cariboo---------
@@ -1435,84 +1436,86 @@ for (sp in species_list_plot) {
 # For multiple species using proportion of population
 # Corrects for detectability differences between species 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
-# 
-# # Vector of species names we’ll potentially loop over later
-# species_list <- unique(species_list_requested$common_name)
-# 
-# #species_list <- c("American Coot","American Wigeon","Barrow's Goldeneye")
-# 
-# chronologies_h5<- NULL
-# 
+#
+
+# Vector of species names we’ll potentially loop over later
+species_list <- unique(species_list_requested$common_name)
+
+
+chronologies_h5<- NULL
+
 #---hd5 Function to generate the chronology for percentage of pop dataset -----
-# 
-# for (species in species_list) {
-#   # download weekly 27km relative abundance, median and confidence limits
-#   # ebirdst_download_status(species,
-#   #                         pattern = "abundance_(median|upper|lower)_3km")
-#   
-#   # load the median weekly relative abundance and lower/upper confidence limits
-#   abd_median <- load_raster(species, metric="median")
-#   abd_lower <- load_raster(species, metric = "lower")
-#   abd_upper <- load_raster(species, metric = "upper")
-#   
-#   # total relative abundance across the entire modeled range of the species, extract as a vector
-#   abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
-#   
-#   # total abundance within the region of interest # extract= extract values for a given loiocation 
-#   # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too 
-#   abd_median_region <- extract(abd_median, hunt_district_cariboo,
-#                                fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_lower_region <- extract(abd_lower,  hunt_district_cariboo,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_upper_region <- extract(abd_upper,  hunt_district_cariboo,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   
-#   # proportion of global population within the region of interest
-#   prop_pop_median <- as.numeric(abd_median_region) / abd_total
-#   prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
-#   prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
-#   
-#   # transform to data frame format with rows corresponding to weeks
-#   # median give as teh median proportion of poplaton within teh area of interest 
-#   chronology <- data.frame(species = species,
-#                            week = as.Date(names(abd_median)),
-#                            median = prop_pop_median,
-#                            lower = prop_pop_lower,
-#                            upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions 
-#   
-#   # combine with other species
-#   chronologies_h5 <- bind_rows(chronologies_h5, chronology)
-# }
-# 
-# #Finally, we can use this data frame to generate migration chronologies for these species.
-# 
-# graphics.off()
-# 
-# out_dir <- "outputs/plots/hunt_district_cariboo/perc_pop_c"
-# 
-# 
-# for (sp in species_list_plot) {
-#   p <- ggplot(chronologies_h5%>% filter(species == sp)) +
-#     aes(x = week, y = median) +
-#     geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
-#     geom_line(linewidth = 1, color="yellow4") +
-#     scale_x_date(date_labels = "%b", date_breaks = "1 month") +
-#     scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
-#     labs(x = NULL,
-#          y = "Percent of population Hunting district Cariboo",
-#          title =paste( "Migration chronologies BC-Hunting district Cariboo-", sp),
-#          color = NULL, fill = NULL) +
-#     theme_classic()+
-#     theme(legend.position = "bottom")
-#   # Save each plot automatically 
-#   ggsave(
-#     filename = file.path(out_dir, paste0("crono_Percpop-hd_c_23_", gsub(" ", "_", sp), ".png")),
-#     plot = p,
-#     width = 8,
-#     height = 5
-#   )
-#   
-# }
+
+for (species in species_list) {
+  # download weekly 27km relative abundance, median and confidence limits
+  # ebirdst_download_status(species,
+  #                         pattern = "abundance_(median|upper|lower)_3km")
+
+  # load the median weekly relative abundance and lower/upper confidence limits
+  abd_median <- load_raster(species, metric="median")
+  abd_lower <- load_raster(species, metric = "lower")
+  abd_upper <- load_raster(species, metric = "upper")
+
+  # total relative abundance across the entire modeled range of the species, extract as a vector
+  abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
+
+  # total abundance within the region of interest # extract= extract values for a given loiocation
+  # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too
+  abd_median_region <- extract(abd_median, hunt_district_cariboo,
+                               fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_lower_region <- extract(abd_lower,  hunt_district_cariboo,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_upper_region <- extract(abd_upper,  hunt_district_cariboo,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+
+  # proportion of global population within the region of interest
+  prop_pop_median <- as.numeric(abd_median_region) / abd_total
+  prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
+  prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
+
+  # transform to data frame format with rows corresponding to weeks
+  # median give as teh median proportion of poplaton within teh area of interest
+  chronology <- data.frame(species = species,
+                           week = as.Date(names(abd_median)),
+                           median = prop_pop_median,
+                           lower = prop_pop_lower,
+                           upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions
+
+  # combine with other species
+  chronologies_h5 <- bind_rows(chronologies_h5, chronology)
+}
+
+#Finally, we can use this data frame to generate migration chronologies for these species.
+
+species_list_plot <- unique(chronologies_h5$species)
+
+#graphics.off()
+
+out_dir <- "outputs/plots/hunt_district_cariboo/perc_pop_c"
+
+
+for (sp in species_list_plot) {
+  p <- ggplot(chronologies_h5%>% filter(species == sp)) +
+    aes(x = week, y = median) +
+    geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
+    geom_line(linewidth = 1, color="yellow4") +
+    scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+    scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
+    labs(x = NULL,
+         y = "Percent of population Hunting district Cariboo",
+         title =paste( "Migration chronologies BC-Hunting district Cariboo-", sp),
+         color = NULL, fill = NULL) +
+    theme_classic()+
+    theme(legend.position = "bottom")
+  # Save each plot automatically
+  ggsave(
+    filename = file.path(out_dir, paste0("crono_Percpop-hd_c_23_", gsub(" ", "_", sp), ".png")),
+    plot = p,
+    width = 8,
+    height = 5
+  )
+
+}
 
 
 # ---------hunting_district_skeena---------
@@ -1612,82 +1615,81 @@ for (sp in species_list_plot) {
 # # Vector of species names we’ll potentially loop over later
 # species_list <- unique(species_list_requested$common_name)
 # 
-# #species_list <- c("American Coot","American Wigeon","Barrow's Goldeneye")
 # 
-# chronologies_h6<- NULL
-# 
-#---hd6 Function to generate the chronology for percentage of pop dataset -----
-# 
-# for (species in species_list) {
-#   # download weekly 27km relative abundance, median and confidence limits
-#   # ebirdst_download_status(species,
-#   #                         pattern = "abundance_(median|upper|lower)_3km")
-#   
-#   # load the median weekly relative abundance and lower/upper confidence limits
-#   abd_median <- load_raster(species, metric="median")
-#   abd_lower <- load_raster(species, metric = "lower")
-#   abd_upper <- load_raster(species, metric = "upper")
-#   
-#   # total relative abundance across the entire modeled range of the species, extract as a vector
-#   abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
-#   
-#   # total abundance within the region of interest # extract= extract values for a given loiocation 
-#   # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too 
-#   abd_median_region <- extract(abd_median, hunt_district_skeena,
-#                                fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_lower_region <- extract(abd_lower,  hunt_district_skeena,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_upper_region <- extract(abd_upper,  hunt_district_skeena,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   
-#   # proportion of global population within the region of interest
-#   prop_pop_median <- as.numeric(abd_median_region) / abd_total
-#   prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
-#   prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
-#   
-#   # transform to data frame format with rows corresponding to weeks
-#   # median give as teh median proportion of poplaton within teh area of interest 
-#   chronology <- data.frame(species = species,
-#                            week = as.Date(names(abd_median)),
-#                            median = prop_pop_median,
-#                            lower = prop_pop_lower,
-#                            upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions 
-#   
-#   # combine with other species
-#   chronologies_h6 <- bind_rows(chronologies_h6, chronology)
-# }
-# 
-# #Finally, we can use this data frame to generate migration chronologies for these species.
-# 
-# graphics.off()
-# 
-# out_dir <- "outputs/plots/hunt_district_skeena/perc_pop_s"
-# 
-# 
-# for (sp in species_list_plot) {
-#   p <- ggplot(chronologies_h6%>% filter(species == sp)) +
-#     aes(x = week, y = median) +
-#     geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
-#     geom_line(linewidth = 1, color="yellow4") +
-#     scale_x_date(date_labels = "%b", date_breaks = "1 month") +
-#     scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
-#     labs(x = NULL,
-#          y = "Percent of population Hunting district Skeena",
-#          title =paste( "Migration chronologies BC-Hunting district Skeena-", sp),
-#          color = NULL, fill = NULL) +
-#     theme_classic()+
-#     theme(legend.position = "bottom")
-#   # Save each plot automatically 
-#   ggsave(
-#     filename = file.path(out_dir, paste0("crono_Percpop-hd_s_23_", gsub(" ", "_", sp), ".png")),
-#     plot = p,
-#     width = 8,
-#     height = 5
-#   )
-#   
-# }
+chronologies_h6<- NULL
 
-# new 
+#---hd6 Function to generate the chronology for percentage of pop dataset -----
+
+for (species in species_list) {
+  # download weekly 27km relative abundance, median and confidence limits
+  # ebirdst_download_status(species,
+  #                         pattern = "abundance_(median|upper|lower)_3km")
+
+  # load the median weekly relative abundance and lower/upper confidence limits
+  abd_median <- load_raster(species, metric="median")
+  abd_lower <- load_raster(species, metric = "lower")
+  abd_upper <- load_raster(species, metric = "upper")
+
+  # total relative abundance across the entire modeled range of the species, extract as a vector
+  abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
+
+  # total abundance within the region of interest # extract= extract values for a given loiocation
+  # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too
+  abd_median_region <- extract(abd_median, hunt_district_skeena,
+                               fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_lower_region <- extract(abd_lower,  hunt_district_skeena,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_upper_region <- extract(abd_upper,  hunt_district_skeena,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+
+  # proportion of global population within the region of interest
+  prop_pop_median <- as.numeric(abd_median_region) / abd_total
+  prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
+  prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
+
+  # transform to data frame format with rows corresponding to weeks
+  # median give as teh median proportion of poplaton within teh area of interest
+  chronology <- data.frame(species = species,
+                           week = as.Date(names(abd_median)),
+                           median = prop_pop_median,
+                           lower = prop_pop_lower,
+                           upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions
+
+  # combine with other species
+  chronologies_h6 <- bind_rows(chronologies_h6, chronology)
+}
+
+#Finally, we can use this data frame to generate migration chronologies for these species.
+
+graphics.off()
+
+species_list_plot <- unique(chronologies_h6$species)
+
+out_dir <- "outputs/plots/hunt_district_skeena/perc_pop_s"
+
+
+for (sp in species_list_plot) {
+  p <- ggplot(chronologies_h6%>% filter(species == sp)) +
+    aes(x = week, y = median) +
+    geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
+    geom_line(linewidth = 1, color="yellow4") +
+    scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+    scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
+    labs(x = NULL,
+         y = "Percent of population Hunting district Skeena",
+         title =paste( "Migration chronologies BC-Hunting district Skeena-", sp),
+         color = NULL, fill = NULL) +
+    theme_classic()+
+    theme(legend.position = "bottom")
+  # Save each plot automatically
+  ggsave(
+    filename = file.path(out_dir, paste0("crono_Percpop-hd_s_23_", gsub(" ", "_", sp), ".png")),
+    plot = p,
+    width = 8,
+    height = 5
+  )
+
+}
 
 
 
@@ -1787,82 +1789,83 @@ for (sp in species_list_plot) {
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 # 
 # # Vector of species names we’ll potentially loop over later
-# species_list <- unique(species_list_requested$common_name)
-# 
-# #species_list <- c("American Coot","American Wigeon","Barrow's Goldeneye")
-# 
-# chronologies_h7<- NULL
-# 
+ species_list <- unique(species_list_requested$common_name)
+
+
+chronologies_h7<- NULL
+
 #---hd7 Function to generate the chronology for percentage of pop dataset -----
-# 
-# for (species in species_list) {
-#   # download weekly 27km relative abundance, median and confidence limits
-#   # ebirdst_download_status(species,
-#   #                         pattern = "abundance_(median|upper|lower)_3km")
-#   
-#   # load the median weekly relative abundance and lower/upper confidence limits
-#   abd_median <- load_raster(species, metric="median")
-#   abd_lower <- load_raster(species, metric = "lower")
-#   abd_upper <- load_raster(species, metric = "upper")
-#   
-#   # total relative abundance across the entire modeled range of the species, extract as a vector
-#   abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
-#   
-#   # total abundance within the region of interest # extract= extract values for a given loiocation 
-#   # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too 
-#   abd_median_region <- extract(abd_median, hunt_district_omineca,
-#                                fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_lower_region <- extract(abd_lower,  hunt_district_omineca,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_upper_region <- extract(abd_upper,  hunt_district_omineca,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   
-#   # proportion of global population within the region of interest
-#   prop_pop_median <- as.numeric(abd_median_region) / abd_total
-#   prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
-#   prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
-#   
-#   # transform to data frame format with rows corresponding to weeks
-#   # median give as teh median proportion of poplaton within teh area of interest 
-#   chronology <- data.frame(species = species,
-#                            week = as.Date(names(abd_median)),
-#                            median = prop_pop_median,
-#                            lower = prop_pop_lower,
-#                            upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions 
-#   
-#   # combine with other species
-#   chronologies_h7 <- bind_rows(chronologies_h7, chronology)
-# }
-# 
-# #Finally, we can use this data frame to generate migration chronologies for these species.
-# 
-# graphics.off()
-# 
-# out_dir <- "outputs/plots/hunt_district_omineca/perc_pop_om"
-# 
-# 
-# for (sp in species_list_plot) {
-#   p <- ggplot(chronologies_h7%>% filter(species == sp)) +
-#     aes(x = week, y = median) +
-#     geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
-#     geom_line(linewidth = 1, color="yellow4") +
-#     scale_x_date(date_labels = "%b", date_breaks = "1 month") +
-#     scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
-#     labs(x = NULL,
-#          y = "Percent of population Hunting district Omineca",
-#          title =paste( "Migration chronologies BC-Hunting district Omineca-", sp),
-#          color = NULL, fill = NULL) +
-#     theme_classic()+
-#     theme(legend.position = "bottom")
-#   # Save each plot automatically 
-#   ggsave(
-#     filename = file.path(out_dir, paste0("crono_Percpop-hd_om_23_", gsub(" ", "_", sp), ".png")),
-#     plot = p,
-#     width = 8,
-#     height = 5
-#   )
-#   
-# }
+#
+for (species in species_list) {
+  # download weekly 27km relative abundance, median and confidence limits
+  # ebirdst_download_status(species,
+  #                         pattern = "abundance_(median|upper|lower)_3km")
+
+  # load the median weekly relative abundance and lower/upper confidence limits
+  abd_median <- load_raster(species, metric="median")
+  abd_lower <- load_raster(species, metric = "lower")
+  abd_upper <- load_raster(species, metric = "upper")
+
+  # total relative abundance across the entire modeled range of the species, extract as a vector
+  abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
+
+  # total abundance within the region of interest # extract= extract values for a given loiocation
+  # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too
+  abd_median_region <- extract(abd_median, hunt_district_omineca,
+                               fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_lower_region <- extract(abd_lower,  hunt_district_omineca,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_upper_region <- extract(abd_upper,  hunt_district_omineca,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+
+  # proportion of global population within the region of interest
+  prop_pop_median <- as.numeric(abd_median_region) / abd_total
+  prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
+  prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
+
+  # transform to data frame format with rows corresponding to weeks
+  # median give as teh median proportion of poplaton within teh area of interest
+  chronology <- data.frame(species = species,
+                           week = as.Date(names(abd_median)),
+                           median = prop_pop_median,
+                           lower = prop_pop_lower,
+                           upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions
+
+  # combine with other species
+  chronologies_h7 <- bind_rows(chronologies_h7, chronology)
+}
+
+#Finally, we can use this data frame to generate migration chronologies for these species.
+
+#graphics.off()
+#
+species_list_plot <- unique(chronologies_h7$species)
+
+out_dir <- "outputs/plots/hunt_district_omineca/perc_pop_om"
+
+
+for (sp in species_list_plot) {
+  p <- ggplot(chronologies_h7%>% filter(species == sp)) +
+    aes(x = week, y = median) +
+    geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
+    geom_line(linewidth = 1, color="yellow4") +
+    scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+    scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
+    labs(x = NULL,
+         y = "Percent of population Hunting district Omineca",
+         title =paste( "Migration chronologies BC-Hunting district Omineca-", sp),
+         color = NULL, fill = NULL) +
+    theme_classic()+
+    theme(legend.position = "bottom")
+  # Save each plot automatically
+  ggsave(
+    filename = file.path(out_dir, paste0("crono_Percpop-hd_om_23_", gsub(" ", "_", sp), ".png")),
+    plot = p,
+    width = 8,
+    height = 5
+  )
+
+}
 
 
 
@@ -1965,86 +1968,85 @@ for (sp in species_list_plot) {
 # # Vector of species names we’ll potentially loop over later
 # species_list <- unique(species_list_requested$common_name)
 # 
-# #species_list <- c("American Coot","American Wigeon","Barrow's Goldeneye")
 # 
 # chronologies_h8<- NULL
 # 
 #---hd8 Function to generate the chronology for percentage of pop dataset -----
-# 
-# for (species in species_list) {
-#   # download weekly 27km relative abundance, median and confidence limits
-#   # ebirdst_download_status(species,
-#   #                         pattern = "abundance_(median|upper|lower)_3km")
-#   
-#   # load the median weekly relative abundance and lower/upper confidence limits
-#   abd_median <- load_raster(species, metric="median")
-#   abd_lower <- load_raster(species, metric = "lower")
-#   abd_upper <- load_raster(species, metric = "upper")
-#   
-#   # total relative abundance across the entire modeled range of the species, extract as a vector
-#   abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
-#   
-#   # total abundance within the region of interest # extract= extract values for a given loiocation 
-#   # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too 
-#   abd_median_region <- extract(abd_median, hunt_district_okanagan,
-#                                fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_lower_region <- extract(abd_lower,  hunt_district_okanagan,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   abd_upper_region <- extract(abd_upper,  hunt_district_okanagan,
-#                               fun = "sum", na.rm = TRUE, ID = FALSE)
-#   
-#   # proportion of global population within the region of interest
-#   prop_pop_median <- as.numeric(abd_median_region) / abd_total
-#   prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
-#   prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
-#   
-#   # transform to data frame format with rows corresponding to weeks
-#   # median give as teh median proportion of poplaton within teh area of interest 
-#   chronology <- data.frame(species = species,
-#                            week = as.Date(names(abd_median)),
-#                            median = prop_pop_median,
-#                            lower = prop_pop_lower,
-#                            upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions 
-#   
-#   # combine with other species
-#   chronologies_h8 <- bind_rows(chronologies_h8, chronology)
-# }
-# 
-# #Finally, we can use this data frame to generate migration chronologies for these species.
-# 
-# graphics.off()
-# 
-# out_dir <- "outputs/plots/hunt_district_okanagan/perc_pop_oka"
-# 
-# 
-# for (sp in species_list_plot) {
-#   p <- ggplot(chronologies_h8%>% filter(species == sp)) +
-#     aes(x = week, y = median) +
-#     geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
-#     geom_line(linewidth = 1, color="yellow4") +
-#     scale_x_date(date_labels = "%b", date_breaks = "1 month") +
-#     scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
-#     labs(x = NULL,
-#          y = "Percent of population Hunting district Okanagan",
-#          title =paste( "Migration chronologies BC-Hunting district Okanagan-", sp),
-#          color = NULL, fill = NULL) +
-#     theme_classic()+
-#     theme(legend.position = "bottom")
-#   # Save each plot automatically 
-#   ggsave(
-#     filename = file.path(out_dir, paste0("crono_Percpop-hd_oka_23_", gsub(" ", "_", sp), ".png")),
-#     plot = p,
-#     width = 8,
-#     height = 5
-#   )
-#   
-# }
+
+for (species in species_list) {
+  # download weekly 27km relative abundance, median and confidence limits
+  # ebirdst_download_status(species,
+  #                         pattern = "abundance_(median|upper|lower)_3km")
+
+  # load the median weekly relative abundance and lower/upper confidence limits
+  abd_median <- load_raster(species, metric="median")
+  abd_lower <- load_raster(species, metric = "lower")
+  abd_upper <- load_raster(species, metric = "upper")
+
+  # total relative abundance across the entire modeled range of the species, extract as a vector
+  abd_total <- global(abd_median, fun = sum, na.rm = TRUE)$sum
+
+  # total abundance within the region of interest # extract= extract values for a given loiocation
+  # here we extract the values firs and then we calculate the proportion of population, we could do twh opossite way too
+  abd_median_region <- extract(abd_median, hunt_district_okanagan,
+                               fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_lower_region <- extract(abd_lower,  hunt_district_okanagan,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+  abd_upper_region <- extract(abd_upper,  hunt_district_okanagan,
+                              fun = "sum", na.rm = TRUE, ID = FALSE)
+
+  # proportion of global population within the region of interest
+  prop_pop_median <- as.numeric(abd_median_region) / abd_total
+  prop_pop_lower <- as.numeric(abd_lower_region) / abd_total
+  prop_pop_upper <- as.numeric(abd_upper_region) / abd_total
+
+  # transform to data frame format with rows corresponding to weeks
+  # median give as teh median proportion of poplaton within teh area of interest
+  chronology <- data.frame(species = species,
+                           week = as.Date(names(abd_median)),
+                           median = prop_pop_median,
+                           lower = prop_pop_lower,
+                           upper = pmin(prop_pop_upper, 1)) # the 1 ensure does not go over 1 as tehy are proportions
+
+  # combine with other species
+  chronologies_h8 <- bind_rows(chronologies_h8, chronology)
+}
+
+#Finally, we can use this data frame to generate migration chronologies for these species.
+
+graphics.off()
+
+out_dir <- "outputs/plots/hunt_district_okanagan/perc_pop_oka"
+
+
+for (sp in species_list_plot) {
+  p <- ggplot(chronologies_h8%>% filter(species == sp)) +
+    aes(x = week, y = median) +
+    geom_ribbon(aes(ymin = lower, ymax = upper),  fill="yellow3", color = NA, alpha = 0.2) +
+    geom_line(linewidth = 1, color="yellow4") +
+    scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+    scale_y_continuous(labels = scales::label_percent()) + # It converts numeric values into percentage strings for the axis.
+    labs(x = NULL,
+         y = "Percent of population Hunting district Okanagan",
+         title =paste( "Migration chronologies BC-Hunting district Okanagan-", sp),
+         color = NULL, fill = NULL) +
+    theme_classic()+
+    theme(legend.position = "bottom")
+  # Save each plot automatically
+  ggsave(
+    filename = file.path(out_dir, paste0("crono_Percpop-hd_oka_23_", gsub(" ", "_", sp), ".png")),
+    plot = p,
+    width = 8,
+    height = 5
+  )
+
+}
 
 
 
 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
-#------ River Deltas ( 2 River deltas)---------------
+#---------River Deltas ( 2 River deltas)---------------
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 # for the river deltas I needed to filter by lenght because the otehr attributes were not different between the two 
 
@@ -2065,7 +2067,7 @@ species_list_requested<- read.csv("data/list/requested_species_list.csv") %>%
 # Vector of species names we’ll potentially loop over later
 species_list <- unique(species_list_requested$common_name)
 
-#---hd8 Function to generate the chronology dataset -----
+#---delta1 Function to generate the chronology dataset -----
 chronologies_abundance <- NULL
 
 for (species in species_list) {
@@ -2240,7 +2242,7 @@ species_list_requested<- read.csv("data/list/requested_species_list.csv") %>%
 # Vector of species names we’ll potentially loop over later
 species_list <- unique(species_list_requested$common_name)
 
-#---hd8 Function to generate the chronology dataset -----
+#---delta2 Function to generate the chronology dataset -----
 chronologies_abundance <- NULL
 
 for (species in species_list) {
@@ -2323,7 +2325,7 @@ species_list <- unique(species_list_requested$common_name)
 
 chronologies_delta2<- NULL
 
-#---Delta1 Function to generate the chronology for percentage of pop dataset -----
+#---Delta2 Function to generate the chronology for percentage of pop dataset -----
 
 for (species in species_list) {
   # download weekly 27km relative abundance, median and confidence limits
