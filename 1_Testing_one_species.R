@@ -15,10 +15,9 @@
 ###_###_####_###_###_###_###_###_###_###_###_###_###_###_###_###_###_
 
 # documentation AND video Check this : https://ebird.github.io/ebirdst/articles/applications.html
-# ================================
+# _#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##_
 # -----0) SETUP & ACCESS KEY-----
-# ================================
-
+# _#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##_
 # ---- Install required libraries ----
 # Data Manipulation
 install.packages("tidyverse")
@@ -69,15 +68,15 @@ library(scico)
 #    usethis::edit_r_environ(); add a line like: EBIRDST_KEY="your-key"
 #    Then call set_ebirdst_access_key(Sys.getenv("EBIRDST_KEY")).
 
-set_ebirdst_access_key("f6me7thr51ul")  # <- 
+set_ebirdst_access_key("vo32metuklp4")  # <- Valid until Sept 2026
 # Where am I running this from (useful for path debugging)?
 getwd()
 # ebirdst package version (useful for reproducibility)
 ebirdst_version()
 
-# ================================
-# 1) CHOOSING THE DATA DIRECTORY FOR EBIRD DATA 
-# ================================
+# _#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##_
+# 1) -------CHOOSING THE DATA DIRECTORY FOR EBIRD DATA ------------
+# _#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##_
 # ebirdst_data_dir() resolves the download directory using:
 # 1) EBIRDST_DATA_DIR env var if set, otherwise
 # 2) tools::R_user_dir("ebirdst", which = "data")
@@ -91,12 +90,12 @@ ebirdst::ebirdst_data_dir()
 
 
 # _#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##_
-# 1) --DOWNLOADING DATA FOR THE SPECIES OF INTEREST ---------
+# 2) --DOWNLOADING DATA FOR THE SPECIES OF INTEREST ---------
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 species_list<-read.csv("data/list/request_species_list.csv")
 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
-# 2)---READING TEH POLYGONS ADN FILTERING THEM------
+# 3)---READING TEH POLYGONS ADN FILTERING THEM------
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 # check the class to decide how to work with them 
 # class( fraser_river<- sf::st_read("data/conservation_polygon/Fraser_Skagit_Valley/SnowGooseSurveyArea.shp"))
@@ -234,7 +233,7 @@ species_list <- unique(species_list_requested$common_name)
 
 
 # #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
-# ----Chronologies------
+# 4)---Chronologies------
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 # Notes: There are so far three different ways I seen people approach the chronologies, here I am using two different ways but the third one might be usefull too
 # 1)[Matt]Plot the chronology using weekly relative abundance estimates cropping to a given geography, CALCULATING the MEAN ( why not the sum?) weekly value for that geography. 
@@ -253,7 +252,14 @@ species_list <- unique(species_list_requested$common_name)
 
 # WARNING The chronologies dont do well for rare species
 # WARNING As we increase scale we get more acceptable level of accuracy in the chronology 
+
 #-------------Harvest zone 1
+harvest_zone1<- sf::st_read("data/conservation_polygon/Harvest_Survey_Zones/Harvest_Survey_Zones_2017.shp") %>%
+  st_transform(8857) %>% 
+  filter(Zonename=="British Columbia - Zone 1") %>% 
+  st_make_valid() # Fixes invalid geometries for example when islands are disconected they facilitate operations later on 
+
+
 #----z1  Function to generate the chronology dataset -------------
 chronologies_abundance <- NULL
 
@@ -462,6 +468,7 @@ for (sp in species_list_plot) {
 
 
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
+
 #--------------Harvest zone 2---------
 #_#_##_#_#_#_#_##_#_#_#_#_#__##_#__##_#__#_#_#_#_#_#_##__#
 
@@ -1969,9 +1976,10 @@ for (sp in species_list_plot) {
 # species_list <- unique(species_list_requested$common_name)
 # 
 # 
-# chronologies_h8<- NULL
 # 
 #---hd8 Function to generate the chronology for percentage of pop dataset -----
+
+ chronologies_h8<- NULL
 
 for (species in species_list) {
   # download weekly 27km relative abundance, median and confidence limits
@@ -2014,7 +2022,8 @@ for (species in species_list) {
 
 #Finally, we can use this data frame to generate migration chronologies for these species.
 
-graphics.off()
+species_list_plot <- unique(chronologies_h8$species)
+
 
 out_dir <- "outputs/plots/hunt_district_okanagan/perc_pop_oka"
 
